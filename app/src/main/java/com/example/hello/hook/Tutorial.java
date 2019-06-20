@@ -1,41 +1,147 @@
 package com.example.hello.hook;
 
 import android.app.Activity;
-import android.app.Dialog;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 
-import java.io.File;
+import com.google.gson.Gson;
+
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.HashMap;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
+import static de.robv.android.xposed.XposedHelpers.findConstructorExact;
+import static de.robv.android.xposed.XposedHelpers.findField;
 
 public class Tutorial implements IXposedHookLoadPackage {
+
+    private Field m;
+    private Activity playActivity;
+
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
 //        hookAllActivity();
 //        hookBalance(lpparam);
+        hookM(lpparam);
         hookRequest(lpparam);
 //        hooMoney(lpparam);
+        hookGson(lpparam);
+//        hookHandler(lpparam);
+    }
+
+    private void hookGson(final LoadPackageParam lpparam) {
+        log("hookGson");
+        findAndHookMethod(Gson.class, "fromJson", String.class,Class.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("before fromJson");
+            }
+        });
+
+
+//        findAndHookMethod(Handler.class, "sendMessage", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                hideTraces(param, "sendMessage");
+//            }
+//        });
+
+
+//        findAndHookMethod(Handler.class, "post", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                hideTraces(param, "post");
+//            }
+//        });
+    }private void hookHandler(final LoadPackageParam lpparam) {
+        findAndHookMethod(Handler.class, "post", Runnable.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                log("before post");
+                try {
+                    XposedBridge.log(new Throwable());
+                } catch (Exception e) {
+
+                }
+//                hideTraces(param,lpparam ,"sendMessageDelayed");
+            }
+        });
+
+
+//        findAndHookMethod(Handler.class, "sendMessage", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                hideTraces(param, "sendMessage");
+//            }
+//        });
+
+
+//        findAndHookMethod(Handler.class, "post", new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                hideTraces(param, "post");
+//            }
+//        });
+    }
+
+    private void hookM(final LoadPackageParam lpparam) {
+        findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                playActivity = (Activity) param.thisObject;
+                String name = playActivity.getClass().getName();
+                XposedBridge.log("****************************" + name);
+                if ("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity".equals(name)) {
+//                    hookHandler(lpparam);
+
+                    XposedBridge.log("************PlayerActivity****************");
+                    m = playActivity.getClass().getDeclaredField("m");
+                    if (m != null) {
+                        XposedBridge.log("get field m");
+                        m.setAccessible(true);
+                        m.set(playActivity, 10);
+                        XposedBridge.log("set value " + 10);
+                    }
+                }
+            }
+        });
     }
 
     private void hookRequest(LoadPackageParam lpparam) {
-        XposedBridge.log("**************  WebSocketService");
-        findAndHookMethod(Dialog.class, "show", new XC_MethodReplacement() {
+        findAndHookMethod("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity$16", lpparam.classLoader, "run", new XC_MethodHook() {
             @Override
-            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
-                return null;
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                super.beforeHookedMethod(param);
+                Object[] args = param.args;
+                Object thisObject = param.thisObject;
+                Field field = thisObject.getClass().getDeclaredField("a");
+                if (field != null) {
+                    XposedBridge.log("get field PlayActivity");
+                    field.setAccessible(true);
+                    Object obj = field.get(thisObject);
+                    XposedBridge.log("activity is " + obj);
+//                    Field m = obj.getClass().getDeclaredField("m");
+                    if (m != null) {
+                        XposedBridge.log("get field m");
+                        m.setAccessible(true);
+                        m.set(playActivity, 10);
+                        XposedBridge.log("set value " + 10);
+                    }
+                }
+                XposedBridge.log("***" + thisObject.toString());
+                for (Object arg : args) {
+                    XposedBridge.log(arg.toString());
+                }
             }
         });
     }
@@ -165,5 +271,104 @@ public class Tutorial implements IXposedHookLoadPackage {
                 super.afterHookedMethod(param);
             }
         });
+    }
+
+    private void log(String str) {
+        XposedBridge.log(str);
+    }
+
+    private void hideTraces(XC_MethodHook.MethodHookParam param, LoadPackageParam lpparam, String tag) throws NoSuchFieldException, IllegalAccessException {
+        try {
+            findAndHookMethod("java.lang.Thread", lpparam.classLoader, "getStackTrace", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    StackTraceElement[] result = (StackTraceElement[]) param.getResult();
+                    //                if (result != null) {
+                    //                    for (StackTraceElement element : result) {
+                    //                        System.out.println("============start=============");
+                    //                        log("============start=============");
+                    //                        System.out.println(element.toString());
+                    //                        log(element.toString());
+                    //                        System.out.println(element.getClassName());
+                    //                        log(element.getClassName());
+                    //                        System.out.println("============e n d============");
+                    //                        log("============e n d============");
+                    //                    }
+                    //                }
+
+                    //                StackTraceElement[] hooks = new StackTraceElement[result.length];
+                    //                for (int i = 0; i < hooks.length; i++) {
+                    //                    StackTraceElement element = result[i];
+                    //                    String className = element.getClassName();
+                    //                    if (className.contains("de.robv.android.xposed.XposedBridge")) {
+                    //                        Log.e("tst", "类名命中:" + className);
+                    //                        className = className.replaceAll("de.robv.android.xposed.XposedBridge", "xxx.xxx.yy");
+                    //                        Class<? extends StackTraceElement> aClass = element.getClass();
+                    //                        Field field = aClass.getDeclaredField("declaringClass");
+                    //                        field.setAccessible(true); // 暴力反射
+                    //                        field.set(element, className);
+                    //                        Log.e("tst", "类名命中处理后:" + className);
+                    //                        Log.e("tst", "类名命中处理后,对象获取:" + element.getClassName());
+                    //                    }
+                    //                    Log.e("tst", "类名:" + className);
+                    //                    hooks[i] = element;
+                    //                }
+                    //                param.setResult(hooks);
+                }
+
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    //de.robv.android.xposed.XposedBridge
+                    StackTraceElement[] result = (StackTraceElement[]) param.getResult();
+                    log("当前类信息:------------------------------------------->" + new Gson().toJson(result));
+                    if (result != null) {
+                        StackTraceElement[] hooks = new StackTraceElement[result.length];
+                        for (int i = 0; i < hooks.length; i++) {
+                            StackTraceElement element = result[i];
+                            log("当前类信息:" + new Gson().toJson(element));
+                            String className = element.getClassName();
+                            Class<? extends StackTraceElement> aClass = element.getClass();
+                            if (className.contains("de.robv.android.xposed.XposedBridge")) {
+                                log("类名命中:" + className);
+                                className = className.replaceAll("de.robv.android.xposed.XposedBridge", "xxx.xxx.yy");
+                                Field field = aClass.getDeclaredField("declaringClass");
+                                field.setAccessible(true); // 暴力反射
+                                field.set(element, className);
+                                //methodName
+                                //fileName
+                                //                            aClass.getDeclaredMethod()
+                                log("类名命中处理后:" + className);
+                                log("类名命中处理后,对象获取:" + element.getClassName());
+                            }
+                            log("类名:" + className);
+                            String fileName = element.getFileName();
+                            String methodName = element.getMethodName();
+                            if (fileName.contains("XposedBridge")) {
+                                Field fieldII = aClass.getDeclaredField("fileName");
+                                fieldII.setAccessible(true); // 暴力反射
+                                fieldII.set(element, "sub");
+                            }
+                            if (methodName.contains("invokeOriginalMethodNative") || methodName.contains("handleHookedMethod")) {
+                                Field fieldI = aClass.getDeclaredField("methodName");
+                                fieldI.setAccessible(true); // 暴力反射
+                                fieldI.set(element, "metheds");
+                            }
+                            hooks[i] = element;
+                        }
+                        param.setResult(hooks);
+                        result = (StackTraceElement[]) param.getResult();
+                        for (StackTraceElement element : result) {
+                            String className = element.getClassName();
+                            if (className.contains("xxx.xxx.yy")) {
+                                log("包名过滤命中======>>>>>>>:" + className + "|===>>>" + element.toString());
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (Throwable e) {
+            e.printStackTrace();
+            log("#堆栈跟踪过滤#" + e);
+        }
     }
 }
