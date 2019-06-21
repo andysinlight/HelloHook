@@ -1,10 +1,9 @@
 package com.example.hello.hook;
 
 import android.app.Activity;
+import android.app.Service;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.Message;
-import android.util.Log;
 
 import com.google.gson.Gson;
 
@@ -13,16 +12,10 @@ import java.lang.reflect.Method;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
-import okhttp3.ResponseBody;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
-import static de.robv.android.xposed.XposedHelpers.findClass;
-import static de.robv.android.xposed.XposedHelpers.findConstructorExact;
-import static de.robv.android.xposed.XposedHelpers.findField;
 
 public class Tutorial implements IXposedHookLoadPackage {
 
@@ -33,17 +26,53 @@ public class Tutorial implements IXposedHookLoadPackage {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
-//        hookAllActivity();
+//        hookAllActivity(lpparam);
 //        hookBalance(lpparam);
 //        hookM(lpparam);
 //        hookRequest(lpparam);
 
-        hookRoomLimit(lpparam);
+//        hookRoomLimit(lpparam);
+//        hookMessage(lpparam);
+        hookService(lpparam);
+    }
+
+    private void hookService(LoadPackageParam lpparam) throws ClassNotFoundException {
+        log("hock service");
+        Class<?> loadClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.websocket.WebSocketService");
+        findAndHookMethod(loadClass, "a",String.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("service");
+                log(param.args[0]+"");
+                super.beforeHookedMethod(param);
+            }
+        });
+    }
+
+    private void hookMessage(LoadPackageParam lpparam) {
+        log("hookMessage");
+
+        Class<?> aClass=null;
+        try {
+            aClass = Class.forName("com.qennnsad.aknkaksd.data.bean.websocket.RoomPublicMsg");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        findAndHookMethod("com.qennnsad.aknkaksd.presentation.ui.room.a.f", lpparam.classLoader,  "a", aClass, String.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("in hook setSay");
+                log("args " + param.args.length);
+                for (Object obj : param.args) {
+//                        showField(obj,obj.getClass().getDeclaredFields());
+                }
+            }
+        });
     }
 
     private void hookRoomLimit(LoadPackageParam lpparam) {
         log("hookRoomLimit");
-        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getPreview_time",  new XC_MethodHook() {
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getPreview_time", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Object thisObject = param.thisObject;
@@ -227,39 +256,47 @@ public class Tutorial implements IXposedHookLoadPackage {
     }
 
 
-    private void hookAllActivity() {
+    private void hookAllActivity(final LoadPackageParam lpparam) {
         findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Activity thisObject = (Activity) param.thisObject;
                 XposedBridge.log("****************************");
                 XposedBridge.log("当前 Activity : " + thisObject.getClass().getName());
-                Field[] fields = thisObject.getClass().getDeclaredFields();
-                Method[] methods = thisObject.getClass().getDeclaredMethods();
-
-                for (Method method : methods) {
-                    XposedBridge.log("方法名：" + method.getName());
-                    //获取本方法所有参数类型，存入数组
-                    Class<?>[] getTypeParameters = method.getParameterTypes();
-                    if (getTypeParameters.length == 0) {
-                        XposedBridge.log("此方法无参数");
-                    }
-                    for (Class<?> class1 : getTypeParameters) {
-                        String parameterName = class1.getName();
-                        XposedBridge.log("参数类型：" + parameterName);
-                    }
+                if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity")) {
+                    hookMessage(lpparam);
+                    return;
                 }
-                for (Field field : fields) {
-                    field.setAccessible(true);
-                    try {
-                        field.set(thisObject, field.getName());
-                    } catch (Throwable e) {
-                        e.printStackTrace();
-                    }
-                    Object o = field.get(thisObject);
-                    String value = o == null ? "null" : o.getClass().getName();
-                    XposedBridge.log("\t\t\t" + field.getName() + " = " + value);
-                }
+//
+//                Field[] fields = thisObject.getClass().getDeclaredFields();
+//                Method[] methods = thisObject.getClass().getDeclaredMethods();
+//
+//                for (Method method : methods) {
+//                    XposedBridge.log("方法名：" + method.getName());
+//                    //获取本方法所有参数类型，存入数组
+//                    Class<?>[] getTypeParameters = method.getParameterTypes();
+//                    if (getTypeParameters.length == 0) {
+//                        XposedBridge.log("此方法无参数");
+//                    }
+//                    for (Class<?> class1 : getTypeParameters) {
+//                        String parameterName = class1.getName();
+//                        XposedBridge.log("参数类型：" + parameterName);
+//                        XposedBridge.log("参数class：" + class1.toString());
+//                    }
+//                }
+//                XposedBridge.log("--------------------------");
+//
+//                for (Field field : fields) {
+//                    field.setAccessible(true);
+//                    try {
+//                        field.set(thisObject, field.getName());
+//                    } catch (Throwable e) {
+//                        e.printStackTrace();
+//                    }
+//                    Object o = field.get(thisObject);
+//                    String value = o == null ? "null" : o.getClass().getName();
+//                    XposedBridge.log("\t" + field.getName() + " = " + value);
+//                }
                 super.afterHookedMethod(param);
             }
         });
@@ -332,4 +369,20 @@ public class Tutorial implements IXposedHookLoadPackage {
             log("#堆栈跟踪过滤#" + e);
         }
     }
+
+    private void showField(Object thisObject, Field[] fields) {
+        for (Field field : fields) {
+            field.setAccessible(true);
+            try {
+                field.set(thisObject, field.getName());
+                Object o = field.get(thisObject);
+                String value = o == null ? "null" : o.toString();
+                XposedBridge.log("\t" + field.getName() + " = " + value);
+            } catch (Throwable e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+
 }
