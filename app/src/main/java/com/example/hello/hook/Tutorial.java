@@ -1,71 +1,102 @@
 package com.example.hello.hook;
 
 import android.app.Activity;
-import android.app.Service;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextUtils;
+import android.view.View;
+import android.widget.RelativeLayout;
 
+import com.example.hello.net.NetUtils;
 import com.google.gson.Gson;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
+import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 
 public class Tutorial implements IXposedHookLoadPackage {
 
     private Field m;
     private Activity playActivity;
+    private String userId;
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
-//        hookAllActivity(lpparam);
+        hookLoginInfo(lpparam);
+        hookAllActivity(lpparam);
+//        hookService(lpparam);
+
+        hookRoomLimit(lpparam);
+//        setImVisiale(lpparam);
+//        hookFriendLimit(lpparam);
+
 //        hookBalance(lpparam);
 //        hookM(lpparam);
 //        hookRequest(lpparam);
 
-//        hookRoomLimit(lpparam);
+//        hookLoginInfo(lpparam);
+//        hookUserInfo(lpparam);
 //        hookMessage(lpparam);
-        hookService(lpparam);
+    }
+
+    private void setImVisiale(LoadPackageParam lpparam) {
+        log("setImVisiale");
+        findAndHookConstructor("com.qennnsad.aknkaksd.data.bean.webview.WebUserInfo", lpparam.classLoader, int.class, int.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("setImVisiale" + param.args.toString());
+                int arg = (int) param.args[1];
+                arg = 1;
+            }
+        });
     }
 
     private void hookService(LoadPackageParam lpparam) throws ClassNotFoundException {
         log("hock service");
         Class<?> loadClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.websocket.WebSocketService");
-        findAndHookMethod(loadClass, "a",String.class, new XC_MethodHook() {
+        findAndHookMethod(loadClass, "a", String.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                log("service");
-                log(param.args[0]+"");
+                String data = param.args[0] + "";
+                log(data);
+                if (data.contains("SendPubMsg") || data.contains("sendGiftNews") || data.contains("login") || data.contains("onLineClient") | data.contains("sendGift")) {
+                    NetUtils.sendPost("http://192.168.0.108:8090/string", data, null);
+                }
                 super.beforeHookedMethod(param);
             }
         });
     }
 
-    private void hookMessage(LoadPackageParam lpparam) {
-        log("hookMessage");
 
-        Class<?> aClass=null;
+    private void hookFriendLimit(LoadPackageParam lpparam) {
+        log("hookFriendLimit");
+        Class<?> aClass = null;
         try {
-            aClass = Class.forName("com.qennnsad.aknkaksd.data.bean.websocket.RoomPublicMsg");
+            aClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.bean.IsaddfriendBean");
         } catch (ClassNotFoundException e) {
             e.printStackTrace();
         }
-        findAndHookMethod("com.qennnsad.aknkaksd.presentation.ui.room.a.f", lpparam.classLoader,  "a", aClass, String.class, new XC_MethodHook() {
+        if (aClass == null) return;
+//        a(IsaddfriendBean isaddfriendBean) {
+        findAndHookMethod("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity", lpparam.classLoader, "a", aClass, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                log("in hook setSay");
-                log("args " + param.args.length);
-                for (Object obj : param.args) {
-//                        showField(obj,obj.getClass().getDeclaredFields());
-                }
+                log("isVerify");
             }
         });
     }
@@ -78,42 +109,61 @@ public class Tutorial implements IXposedHookLoadPackage {
                 Object thisObject = param.thisObject;
                 Field[] fields = new Field[4];
                 fields[0] = thisObject.getClass().getDeclaredField("preview_time");
+//                fields[1] = thisObject.getClass().getDeclaredField("id");
+//                fields[2] = thisObject.getClass().getDeclaredField("plid");
+//                fields[3] = thisObject.getClass().getDeclaredField("bsid");
+//                fields[3] = thisObject.getClass().getDeclaredField("come");
                 for (Field field : fields) {
                     if (field == null) continue;
                     field.setAccessible(true);
-                    field.set(param.thisObject, 1000000);
-                    Object o = field.get(thisObject);
-                    XposedBridge.log("\t\t\t hookRoomLimit " + field.getName() + " = " + o);
+                    field.set(thisObject, 10000);
+                    XposedBridge.log(field.getName() + field.get(param.thisObject));
                 }
             }
         });
     }
 
-    private void hookGson(final LoadPackageParam lpparam) {
-        log("hookGson");
-        findAndHookMethod(Gson.class, "fromJson", String.class, Class.class, new XC_MethodHook() {
+    private void hookLoginInfo(LoadPackageParam lpparam) {
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.user.LoginInfoAll", lpparam.classLoader, "getToken", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                log("before fromJson");
-            }
-        });
-
-    }
-
-    private void hookHandler(final LoadPackageParam lpparam) {
-        findAndHookMethod(Handler.class, "post", Runnable.class, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                log("before post");
-                try {
-                    XposedBridge.log(new Throwable());
-                } catch (Exception e) {
-
+                Object thisObject = param.thisObject;
+                Field[] fields = new Field[4];
+                fields[0] = thisObject.getClass().getDeclaredField("user");
+                for (Field field : fields) {
+                    if (field == null) continue;
+                    field.setAccessible(true);
+                    Object userBean = field.get(param.thisObject);
+                    Field id = userBean.getClass().getDeclaredField("id");
+                    id.setAccessible(true);
+                    userId = (String) id.get(userBean);
+                    XposedBridge.log("LoginInfo user id is " + userId);
                 }
-//                hideTraces(param,lpparam ,"sendMessageDelayed");
             }
         });
     }
+
+    private void hookUserInfo(LoadPackageParam lpparam) {
+        XposedBridge.log("hookUserInfo ");
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.me.UserInfo", lpparam.classLoader, "getId", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                Object thisObject = param.thisObject;
+                showField(this, thisObject.getClass().getDeclaredFields());
+//                Field[] fields = new Field[4];
+//                fields[0] = thisObject.getClass().getDeclaredField("user");
+//                for (Field field : fields) {
+//                    if (field == null) continue;
+//                    field.setAccessible(true);
+//                    Object userBean = field.get(param.thisObject);
+//                    Field id = userBean.getClass().getDeclaredField("id");
+//                    id.setAccessible(true);
+//                    Object o = id.get(userBean);
+//                }
+            }
+        });
+    }
+
 
     private void hookM(final LoadPackageParam lpparam) {
         findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
@@ -255,18 +305,98 @@ public class Tutorial implements IXposedHookLoadPackage {
         });
     }
 
+    boolean validate = true;
 
     private void hookAllActivity(final LoadPackageParam lpparam) {
         findAndHookMethod(Activity.class, "onCreate", Bundle.class, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                Activity thisObject = (Activity) param.thisObject;
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                final Activity thisObject = (Activity) param.thisObject;
                 XposedBridge.log("****************************");
                 XposedBridge.log("当前 Activity : " + thisObject.getClass().getName());
-                if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity")) {
-                    hookMessage(lpparam);
-                    return;
+
+                if (!TextUtils.isEmpty(userId)) {
+                    log("/active_state start");
+                    HashMap<String, String> p = new HashMap<>();
+                    p.put("id", userId);
+                    NetUtils.Post("/active_state", p, new NetUtils.callResult() {
+                        @Override
+                        public void result(boolean success, String result) {
+                            if (success) {
+                                validate = true;
+                                log(result);
+                            } else {
+                                validate = false;
+                                log(result);
+                            }
+                        }
+                    });
                 }
+
+                if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity")) {
+                    if (!validate) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(thisObject);
+                        builder.setTitle("你好").setCancelable(false).
+                                setMessage("破解程序试用中").setPositiveButton("马上激活", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialog, int which) {
+                                HashMap<String, String> p = new HashMap<>();
+                                p.put("id", userId);
+                                NetUtils.Post("/active", p, new NetUtils.callResult() {
+                                    @Override
+                                    public void result(boolean success, final String result) {
+                                        if (success) {
+                                            log(result);
+                                            final Intent browserIntent = new Intent(Intent.ACTION_VIEW);
+                                            browserIntent.setData(Uri.parse(result));
+                                            thisObject.runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    thisObject.startActivity(browserIntent);
+                                                }
+                                            });
+                                        } else {
+                                            log(result);
+                                        }
+                                    }
+                                });
+                            }
+                        });
+                        builder.show();
+                    }
+                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
+                    final Method addFriend = thisObject.getClass().getDeclaredMethod("u");
+                    if (addFriend == null) {
+                        XposedBridge.log("获取添加朋友方法失败");
+                        return;
+                    }
+                    addFriend.setAccessible(true);
+                    thisObject.runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            try {
+                                XposedBridge.log("添加朋友 run");
+                                addFriend.invoke(thisObject);
+                            } catch (IllegalAccessException e) {
+                                e.printStackTrace();
+                            } catch (InvocationTargetException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
+                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.MainActivity")) {
+//                    XposedBridge.log("set im visible");
+//                    new Handler().postDelayed(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            View o = thisObject.findViewById(2131755542);
+//                            XposedBridge.log(t.getName() + " id is later " + o);
+//                            if (o != null)
+//                                o.setVisibility(View.VISIBLE);
+//                        }
+//                    }, 5000);
+                }
+
 //
 //                Field[] fields = thisObject.getClass().getDeclaredFields();
 //                Method[] methods = thisObject.getClass().getDeclaredMethods();
