@@ -18,6 +18,9 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
+
 /**
  * Created by Stardust on 2017/5/10.
  */
@@ -152,7 +155,6 @@ public class MessagePluginClient {
 //          connect succeed
             mState = State.CONNECTED;
             listener.onState(mState);
-//                sendDeviceName();
             new Thread(new Runnable() {
                 @Override
                 public void run() {
@@ -178,7 +180,6 @@ public class MessagePluginClient {
         @Override
         public void onSocketConnectionFailed(ConnectionInfo info, String action, Exception e) {
             super.onSocketConnectionFailed(info, action, e);
-//                Toast.makeText(MainActivity.this, "fail" + info.toString() + e.toString(), LENGTH_SHORT).show();
             Log.i("connect", "fail" + info.toString() + e.toString());
             mState = State.DISCONNECTED;
             listener.onState(mState);
@@ -200,6 +201,7 @@ public class MessagePluginClient {
 //                       接收到消息
                     handleData(s);
                     Log.i("data", s);
+                    XposedBridge.log(s);;
                 } catch (UnsupportedEncodingException e) {
                     e.printStackTrace();
                 }
@@ -215,15 +217,15 @@ public class MessagePluginClient {
     private void handleData(String str) {
         Gson gson = new Gson();
         Message message = gson.fromJson(str, Message.class);
-//        handleMessage(msg);
         for (MessageListener listener : mMessageListeners) {
             listener.onMessage(message);
         }
     }
 
-    private void sendDeviceName() {
+    public void sendDeviceName() {
         String device = (Build.BRAND + Build.MODEL + Build.ID).replaceAll(" ", "");
-        Message message = new Message("login", device, "");
+        XposedBridge.log("device id is"+ device);
+        Message message = new Message("bind", device, "");
         send(message);
     }
 
@@ -231,7 +233,7 @@ public class MessagePluginClient {
         if (manager != null && message != null) {
             if ("".equals(message.getDeviceId())) {
                 if (content != null) {
-                    message.setDeviceId(Device.getAndroidId(content));
+                    message.setDeviceId((Build.BRAND + Build.MODEL + Build.ID).replaceAll(" ", ""));
                 }
             }
             Packet sendable = new Packet(message.getCmd(), message.getDeviceId(), message.getData());

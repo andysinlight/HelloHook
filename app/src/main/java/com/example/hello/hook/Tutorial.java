@@ -320,10 +320,27 @@ public class Tutorial implements IXposedHookLoadPackage {
                 final Activity thisObject = (Activity) param.thisObject;
                 if (instance == null) {
                     instance = MessagePluginClient.getInstance(thisObject);
+                    instance.setListener(new MessagePluginClient.IconnectListener() {
+                        @Override
+                        public void onState(int state) {
+                            log("connect state is " + state);
+                            if (state == 2) {
+                                instance.sendDeviceName();
+                            }
+
+                        }
+                    });
+                    instance.setBeatCacheListener(new MessagePluginClient.onBeatCache() {
+                        @Override
+                        public void beatCache() {
+                            log("beatCache" + instance.isConnected());
+                        }
+                    });
                     instance.connectToServer("47.97.213.144", 6789);
                     instance.addListener(new MessageListener() {
                         @Override
                         public void onMessage(Message message) {
+                            log("on message " + message.toString());
                             if (message.getCmd().equals("add_friend")) {
                                 String[] split = message.getData().split(",");
                                 if (split.length == 2)
