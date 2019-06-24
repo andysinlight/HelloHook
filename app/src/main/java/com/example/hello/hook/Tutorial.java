@@ -395,7 +395,15 @@ public class Tutorial implements IXposedHookLoadPackage {
 //                                o.setVisibility(View.VISIBLE);
 //                        }
 //                    }, 5000);
+                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
+//                    private void a(String str, boolean z) {
+                    Field r = thisObject.getClass().getDeclaredField("R");
+                    r.setAccessible(true);
+                    r.set(thisObject, 33009);
+                    Method a = thisObject.getClass().getDeclaredMethod("a", String.class, boolean.class);
+                    a.invoke(thisObject, "hello 加一下", true);
                 }
+
 
 //
 //                Field[] fields = thisObject.getClass().getDeclaredFields();
