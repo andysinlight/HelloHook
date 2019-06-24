@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -11,6 +12,9 @@ import android.text.TextUtils;
 import android.view.View;
 import android.widget.RelativeLayout;
 
+import com.example.hello.message.Message;
+import com.example.hello.message.MessageListener;
+import com.example.hello.message.MessagePluginClient;
 import com.example.hello.net.NetUtils;
 import com.google.gson.Gson;
 
@@ -32,6 +36,8 @@ public class Tutorial implements IXposedHookLoadPackage {
     private Field m;
     private Activity playActivity;
     private String userId;
+    private MessagePluginClient instance;
+    private static Activity OtherUser;
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
@@ -312,6 +318,20 @@ public class Tutorial implements IXposedHookLoadPackage {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 final Activity thisObject = (Activity) param.thisObject;
+                if (instance == null) {
+                    instance = MessagePluginClient.getInstance(thisObject);
+                    instance.connectToServer("47.97.213.144", 6789);
+                    instance.addListener(new MessageListener() {
+                        @Override
+                        public void onMessage(Message message) {
+                            if (message.getCmd().equals("add_friend")) {
+                                String[] split = message.getData().split(",");
+                                if (split.length == 2)
+                                    addFriend(split[0], split[1]);
+                            }
+                        }
+                    });
+                }
                 XposedBridge.log("****************************");
                 XposedBridge.log("当前 Activity : " + thisObject.getClass().getName());
 
@@ -397,11 +417,7 @@ public class Tutorial implements IXposedHookLoadPackage {
 //                    }, 5000);
                 } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
 //                    private void a(String str, boolean z) {
-                    Field r = thisObject.getClass().getDeclaredField("R");
-                    r.setAccessible(true);
-                    r.set(thisObject, 33009);
-                    Method a = thisObject.getClass().getDeclaredMethod("a", String.class, boolean.class);
-                    a.invoke(thisObject, "hello 加一下", true);
+                    OtherUser = thisObject;
                 }
 
 
@@ -519,6 +535,27 @@ public class Tutorial implements IXposedHookLoadPackage {
             } catch (Throwable e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+
+    public void addFriend(String id, String message) {
+        log("add friend " + id + " " + message);
+        if (OtherUser == null) return;
+        try {
+            Field r = OtherUser.getClass().getDeclaredField("R");
+            r.setAccessible(true);
+            r.set(OtherUser, id);
+            Method a = OtherUser.getClass().getDeclaredMethod("a", String.class, boolean.class);
+            a.invoke(OtherUser, message, true);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
         }
     }
 
