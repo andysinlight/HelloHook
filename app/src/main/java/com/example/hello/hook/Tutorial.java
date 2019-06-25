@@ -4,13 +4,9 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.net.ConnectivityManager;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.text.TextUtils;
-import android.view.View;
-import android.widget.RelativeLayout;
 
 import com.example.hello.message.Message;
 import com.example.hello.message.MessageListener;
@@ -30,6 +26,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class Tutorial implements IXposedHookLoadPackage {
 
@@ -38,6 +35,7 @@ public class Tutorial implements IXposedHookLoadPackage {
     private String userId;
     private MessagePluginClient instance;
     private static Activity OtherUser;
+    private Object meObject;
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
@@ -48,6 +46,8 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookService(lpparam);
 
         hookRoomLimit(lpparam);
+        hookMePresenter(lpparam);
+        hookBaseResponse(lpparam);
 //        setImVisiale(lpparam);
 //        hookFriendLimit(lpparam);
 
@@ -59,6 +59,48 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookUserInfo(lpparam);
 //        hookMessage(lpparam);
     }
+
+    private void hookBaseResponse(LoadPackageParam lpparam) {
+        log("hookBaseResponse");
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.BaseResponse", lpparam.classLoader, "getData", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("get a user info");
+                Object thisObject = param.thisObject;
+                Field field = thisObject.getClass().getDeclaredField("data");
+                field.setAccessible(true);
+                log(field.getName() + ">>>" + field.get(thisObject).toString());
+            }
+        });
+    }
+
+    private void hookMePresenter(LoadPackageParam lpparam) {
+        log("hookMePresenter");
+        findAndHookMethod("com.qennnsad.aknkaksd.presentation.ui.main.me.d", lpparam.classLoader, "a", Integer.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                meObject = param.thisObject;
+                super.afterHookedMethod(param);
+            }
+        });
+    }
+
+    private void getUserInfo(String id) {
+        log("get user info " + id);
+        if (meObject == null || TextUtils.isEmpty(id)) return;
+        try {
+            Method a = meObject.getClass().getDeclaredMethod("a", Integer.class);
+            a.setAccessible(true);
+            a.invoke(meObject, Integer.valueOf(id));
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private void setImVisiale(LoadPackageParam lpparam) {
         log("setImVisiale");
@@ -341,10 +383,14 @@ public class Tutorial implements IXposedHookLoadPackage {
                         @Override
                         public void onMessage(Message message) {
                             log("on message " + message.toString());
-                            if (message.getCmd().equals("add_friend")) {
-                                String[] split = message.getData().split(",");
+                            String cmd = message.getCmd();
+                            String data = message.getData();
+                            if (cmd.equals("add_friend")) {
+                                String[] split = data.split(",");
                                 if (split.length == 2)
                                     addFriend(split[0], split[1]);
+                            } else if (cmd.equals("user_info")) {
+                                getUserInfo(data);
                             }
                         }
                     });
@@ -435,6 +481,7 @@ public class Tutorial implements IXposedHookLoadPackage {
                 } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
 //                    private void a(String str, boolean z) {
                     OtherUser = thisObject;
+//                    hookMeUser(lpparam);
                 }
 
 
