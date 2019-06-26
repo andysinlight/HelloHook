@@ -2,28 +2,18 @@ package com.example.hello.net;
 
 import org.json.JSONObject;
 
-import de.robv.android.xposed.XposedBridge;
-import okhttp3.*;
-
-import javax.net.ssl.*;
-
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Method;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.security.cert.CertificateException;
-import java.util.Arrays;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HttpsURLConnection;
 
 public class NetUtils {
 

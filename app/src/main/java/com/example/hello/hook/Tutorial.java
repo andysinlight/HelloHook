@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.example.hello.message.Message;
 import com.example.hello.message.MessageListener;
@@ -26,7 +27,6 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
-import static de.robv.android.xposed.XposedHelpers.findClass;
 
 public class Tutorial implements IXposedHookLoadPackage {
 
@@ -48,6 +48,7 @@ public class Tutorial implements IXposedHookLoadPackage {
         hookRoomLimit(lpparam);
         hookMePresenter(lpparam);
         hookBaseResponse(lpparam);
+//        hookConvertResponse(lpparam);
 //        setImVisiale(lpparam);
 //        hookFriendLimit(lpparam);
 
@@ -60,16 +61,36 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookMessage(lpparam);
     }
 
+    private void hookConvertResponse(LoadPackageParam lpparam) {
+        log("hookConvertResponse");
+        Class<?> aClass = null;
+        try {
+            aClass = lpparam.classLoader.loadClass("okhttp3.ResponseBody");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        if (aClass == null) return;
+        log("ResponseBody is load");
+        findAndHookMethod("retrofit2.Converter", lpparam.classLoader, "convert", aClass, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("hookConvert method");
+            }
+        });
+    }
+
     private void hookBaseResponse(LoadPackageParam lpparam) {
         log("hookBaseResponse");
         findAndHookMethod("com.qennnsad.aknkaksd.data.bean.BaseResponse", lpparam.classLoader, "getData", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 log("get a user info");
+                Gson gson = new Gson();
                 Object thisObject = param.thisObject;
                 Field field = thisObject.getClass().getDeclaredField("data");
                 field.setAccessible(true);
-                log(field.getName() + ">>>" + field.get(thisObject).toString());
+                Object data = field.get(thisObject);
+                Log.d("hook_response", data.getClass().getName() + ":   " + gson.toJson(data));
             }
         });
     }
@@ -396,8 +417,8 @@ public class Tutorial implements IXposedHookLoadPackage {
                     });
                 }
                 XposedBridge.log("****************************");
-                XposedBridge.log("当前 Activity : " + thisObject.getClass().getName());
-
+                String currentActivityName = thisObject.getClass().getName();
+                XposedBridge.log("当前 Activity : " + currentActivityName);
                 if (!TextUtils.isEmpty(userId)) {
                     log("/active_state start");
                     HashMap<String, String> p = new HashMap<>();
@@ -416,7 +437,7 @@ public class Tutorial implements IXposedHookLoadPackage {
                     });
                 }
 
-                if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity")) {
+                if (currentActivityName.contains("com.qennnsad.aknkaksd.presentation.ui.room.player.player.PlayerActivity")) {
                     if (!validate) {
                         AlertDialog.Builder builder = new AlertDialog.Builder(thisObject);
                         builder.setTitle("你好").setCancelable(false).
@@ -447,7 +468,8 @@ public class Tutorial implements IXposedHookLoadPackage {
                         });
                         builder.show();
                     }
-                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
+                } else if (currentActivityName.contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
+                    OtherUser = thisObject;
                     final Method addFriend = thisObject.getClass().getDeclaredMethod("u");
                     if (addFriend == null) {
                         XposedBridge.log("获取添加朋友方法失败");
@@ -467,23 +489,7 @@ public class Tutorial implements IXposedHookLoadPackage {
                             }
                         }
                     });
-                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.MainActivity")) {
-//                    XposedBridge.log("set im visible");
-//                    new Handler().postDelayed(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            View o = thisObject.findViewById(2131755542);
-//                            XposedBridge.log(t.getName() + " id is later " + o);
-//                            if (o != null)
-//                                o.setVisibility(View.VISIBLE);
-//                        }
-//                    }, 5000);
-                } else if (thisObject.getClass().getName().contains("com.qennnsad.aknkaksd.presentation.ui.main.me.OtherUserActivity")) {
-//                    private void a(String str, boolean z) {
-                    OtherUser = thisObject;
-//                    hookMeUser(lpparam);
                 }
-
 
 //
 //                Field[] fields = thisObject.getClass().getDeclaredFields();
@@ -603,23 +609,35 @@ public class Tutorial implements IXposedHookLoadPackage {
     }
 
 
-    public void addFriend(String id, String message) {
+    public void addFriend(String id, final String message) {
         log("add friend " + id + " " + message);
+        log("OtherUser is " + OtherUser.toString());
         if (OtherUser == null) return;
         try {
             Field r = OtherUser.getClass().getDeclaredField("R");
             r.setAccessible(true);
-            r.set(OtherUser, id);
-            Method a = OtherUser.getClass().getDeclaredMethod("a", String.class, boolean.class);
-            a.invoke(OtherUser, message, true);
-        } catch (IllegalAccessException e) {
+            Object o = r.get(OtherUser);
+            Field id_field = o.getClass().getDeclaredField("id");
+            id_field.setAccessible(true);
+            id_field.set(o,id);
+//            r.set(OtherUser, id);
+            final Method a = OtherUser.getClass().getDeclaredMethod("a", String.class, boolean.class);
+            a.setAccessible(true);
+            OtherUser.runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        a.invoke(OtherUser, message, true);
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
+                    } catch (InvocationTargetException e) {
+                        e.printStackTrace();
+                    }
+                }
+            });
+        } catch (Exception e) {
             e.printStackTrace();
-        } catch (NoSuchFieldException e) {
-            e.printStackTrace();
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
+            log("OtherUser is " + OtherUser.toString());
         }
     }
 
