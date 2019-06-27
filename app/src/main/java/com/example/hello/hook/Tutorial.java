@@ -2,6 +2,7 @@ package com.example.hello.hook;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.Application;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -13,6 +14,7 @@ import com.example.hello.message.Message;
 import com.example.hello.message.MessageListener;
 import com.example.hello.message.MessagePluginClient;
 import com.example.hello.net.NetUtils;
+import com.example.hello.utils.utils;
 import com.google.gson.Gson;
 
 import java.lang.reflect.Field;
@@ -41,13 +43,14 @@ public class Tutorial implements IXposedHookLoadPackage {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
-        hookLoginInfo(lpparam);
-        hookAllActivity(lpparam);
+        hookApplication(lpparam);
+//        hookLoginInfo(lpparam);
+//        hookAllActivity(lpparam);
 //        hookService(lpparam);
 
-        hookRoomLimit(lpparam);
-        hookMePresenter(lpparam);
-        hookBaseResponse(lpparam);
+//        hookRoomLimit(lpparam);
+//        hookMePresenter(lpparam);
+//        hookBaseResponse(lpparam);
 //        hookConvertResponse(lpparam);
 //        setImVisiale(lpparam);
 //        hookFriendLimit(lpparam);
@@ -59,6 +62,23 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookLoginInfo(lpparam);
 //        hookUserInfo(lpparam);
 //        hookMessage(lpparam);
+    }
+
+    private void hookApplication(LoadPackageParam lpparam) {
+        log("hookApplication");
+        findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                Application thisObject = (Application) param.thisObject;
+                Object result = param.getResult();
+//                showField(thisObject);
+                String name = thisObject.getClass().getName();
+                if (name.contains("BeautyLiveApplication")) {
+                    utils.dump("aaaaaa.a", thisObject.getClass());
+                }
+                XposedBridge.log("****************************" + name);
+            }
+        });
     }
 
     private void hookConvertResponse(LoadPackageParam lpparam) {
@@ -218,17 +238,7 @@ public class Tutorial implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Object thisObject = param.thisObject;
-                showField(this, thisObject.getClass().getDeclaredFields());
-//                Field[] fields = new Field[4];
-//                fields[0] = thisObject.getClass().getDeclaredField("user");
-//                for (Field field : fields) {
-//                    if (field == null) continue;
-//                    field.setAccessible(true);
-//                    Object userBean = field.get(param.thisObject);
-//                    Field id = userBean.getClass().getDeclaredField("id");
-//                    id.setAccessible(true);
-//                    Object o = id.get(userBean);
-//                }
+                showField(this);
             }
         });
     }
@@ -491,36 +501,7 @@ public class Tutorial implements IXposedHookLoadPackage {
                     });
                 }
 
-//
-//                Field[] fields = thisObject.getClass().getDeclaredFields();
-//                Method[] methods = thisObject.getClass().getDeclaredMethods();
-//
-//                for (Method method : methods) {
-//                    XposedBridge.log("方法名：" + method.getName());
-//                    //获取本方法所有参数类型，存入数组
-//                    Class<?>[] getTypeParameters = method.getParameterTypes();
-//                    if (getTypeParameters.length == 0) {
-//                        XposedBridge.log("此方法无参数");
-//                    }
-//                    for (Class<?> class1 : getTypeParameters) {
-//                        String parameterName = class1.getName();
-//                        XposedBridge.log("参数类型：" + parameterName);
-//                        XposedBridge.log("参数class：" + class1.toString());
-//                    }
-//                }
-//                XposedBridge.log("--------------------------");
-//
-//                for (Field field : fields) {
-//                    field.setAccessible(true);
-//                    try {
-//                        field.set(thisObject, field.getName());
-//                    } catch (Throwable e) {
-//                        e.printStackTrace();
-//                    }
-//                    Object o = field.get(thisObject);
-//                    String value = o == null ? "null" : o.getClass().getName();
-//                    XposedBridge.log("\t" + field.getName() + " = " + value);
-//                }
+
                 super.afterHookedMethod(param);
             }
         });
@@ -594,15 +575,38 @@ public class Tutorial implements IXposedHookLoadPackage {
         }
     }
 
-    private void showField(Object thisObject, Field[] fields) {
+    private void showField(Object thisObject) {
+        Field[] fields = thisObject.getClass().getDeclaredFields();
+        Method[] methods = thisObject.getClass().getDeclaredMethods();
+
+        for (Method method : methods) {
+            XposedBridge.log("方法名：" + method.getName());
+            //获取本方法所有参数类型，存入数组
+            Class<?>[] getTypeParameters = method.getParameterTypes();
+            if (getTypeParameters.length == 0) {
+                XposedBridge.log("此方法无参数");
+            }
+            for (Class<?> class1 : getTypeParameters) {
+                String parameterName = class1.getName();
+                XposedBridge.log("参数类型：" + parameterName);
+                XposedBridge.log("参数class：" + class1.toString());
+            }
+        }
+        XposedBridge.log("--------------------------");
+
         for (Field field : fields) {
             field.setAccessible(true);
             try {
                 field.set(thisObject, field.getName());
-                Object o = field.get(thisObject);
-                String value = o == null ? "null" : o.toString();
-                XposedBridge.log("\t" + field.getName() + " = " + value);
             } catch (Throwable e) {
+                e.printStackTrace();
+            }
+            Object o = null;
+            try {
+                o = field.get(thisObject);
+                String value = o == null ? "null" : o.getClass().getName();
+                XposedBridge.log("\t" + field.getName() + " = " + value);
+            } catch (IllegalAccessException e) {
                 e.printStackTrace();
             }
         }
@@ -619,7 +623,7 @@ public class Tutorial implements IXposedHookLoadPackage {
             Object o = r.get(OtherUser);
             Field id_field = o.getClass().getDeclaredField("id");
             id_field.setAccessible(true);
-            id_field.set(o,id);
+            id_field.set(o, id);
 //            r.set(OtherUser, id);
             final Method a = OtherUser.getClass().getDeclaredMethod("a", String.class, boolean.class);
             a.setAccessible(true);
