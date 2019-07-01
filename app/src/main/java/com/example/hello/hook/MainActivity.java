@@ -8,6 +8,8 @@ import android.view.View;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import com.example.hello.net.NetUtils;
+
 public class MainActivity extends AppCompatActivity {
 
     @Override
@@ -19,6 +21,7 @@ public class MainActivity extends AppCompatActivity {
 //        handler.dispatchMessage();
 //        handler.postDelayed();
 //        handler.post()
+        NetUtils.getState(this,"1234");
     }
 
     @Override

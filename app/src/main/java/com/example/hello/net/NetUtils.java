@@ -1,5 +1,9 @@
 package com.example.hello.net;
 
+import android.app.Activity;
+import android.util.Log;
+import android.widget.Toast;
+
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -11,11 +15,14 @@ import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.net.ssl.HttpsURLConnection;
 
 public class NetUtils {
+    static String Base_Url = "http://47.97.213.144/api";
+    final static String TAG = "hello";
 
     public interface callResult {
         void result(boolean success, String result);
@@ -67,9 +74,8 @@ public class NetUtils {
 
 //    static String Base_Url = "http://192.168.0.108";
 //    http://47.97.213.144/api/kwy_notify
-    static String Base_Url = "http://47.97.213.144/api";
 
-    public static void Post(final String path, final Map<String,String> params, final callResult callResult) {
+    public static void Post(final String path, final Map<String, String> params, final callResult callResult) {
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -100,14 +106,14 @@ public class NetUtils {
                         }
                         JSONObject jsonObject = new JSONObject(sb.toString());
                         boolean success = jsonObject.getBoolean("success");
-                        if(success){
-                            callResult.result(true,jsonObject.getString("data"));
-                        }else{
-                            callResult.result(false,jsonObject.getString("msg"));
+                        if (success) {
+                            callResult.result(true, jsonObject.getString("data"));
+                        } else {
+                            callResult.result(false, jsonObject.getString("msg"));
                         }
                         in.close();
-                    }else{
-                        callResult.result(false, responseCode+"");
+                    } else {
+                        callResult.result(false, responseCode + "");
                     }
                     conn.disconnect();
                 } catch (Exception e) {
@@ -118,12 +124,11 @@ public class NetUtils {
         }).start();
     }
 
-    private static String getQuery(Map<String ,String> params) throws UnsupportedEncodingException
-    {
+    private static String getQuery(Map<String, String> params) throws UnsupportedEncodingException {
         StringBuilder result = new StringBuilder();
         boolean first = true;
 
-        for(String key:params.keySet()){
+        for (String key : params.keySet()) {
             String value = params.get(key);
             if (first)
                 first = false;
@@ -137,6 +142,31 @@ public class NetUtils {
         return result.toString();
     }
 
+
+    private static boolean validate = false;
+    public static void getState(final Activity activity, String id) {
+        if (validate) return;
+        HashMap<String, String> p = new HashMap<>();
+        p.put("id", id);
+        NetUtils.Post("/active_state", p, new NetUtils.callResult() {
+            @Override
+            public void result(boolean success, final String result) {
+                activity.runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Toast.makeText(activity, result, Toast.LENGTH_SHORT).show();
+                    }
+                });
+                if (success) {
+                    validate = true;
+                    Log.d(TAG, result);
+                } else {
+                    validate = false;
+                    Log.d(TAG, result);
+                }
+            }
+        });
+    }
 
 
 }

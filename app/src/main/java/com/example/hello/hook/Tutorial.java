@@ -3,6 +3,7 @@ package com.example.hello.hook;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Application;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
@@ -24,6 +25,7 @@ import java.util.HashMap;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
@@ -38,6 +40,11 @@ public class Tutorial implements IXposedHookLoadPackage {
     private MessagePluginClient instance;
     private static Activity OtherUser;
     private Object meObject;
+    int a;
+
+    public int getA() {
+        return 10000;
+    }
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
@@ -46,7 +53,10 @@ public class Tutorial implements IXposedHookLoadPackage {
         hookApplication(lpparam);
 //        hookLoginInfo(lpparam);
 //        hookAllActivity(lpparam);
-//        hookService(lpparam);
+        hookService(lpparam);
+        hookLog(lpparam);
+        hookPlay(lpparam);
+        hookUpdate(lpparam);
 
 //        hookRoomLimit(lpparam);
 //        hookMePresenter(lpparam);
@@ -62,6 +72,58 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookLoginInfo(lpparam);
 //        hookUserInfo(lpparam);
 //        hookMessage(lpparam);
+    }
+
+    private void hookUpdate(LoadPackageParam lpparam) {
+        log("hookUpdate");
+        findAndHookMethod("com.qennnsad.aknkaksd.util.q", lpparam.classLoader, "a", Context.class, new XC_MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                log(param.toString());
+                return "1.6.5";
+            }
+        });
+    }
+
+    private void hookPlay(LoadPackageParam lpparam) {
+        Class<?> aClass = null;
+        try {
+            aClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.bean.user.UserBean");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+        if (aClass == null) return;
+//        public static WsLoginRequest a(String str) {
+//        at com.qennnsad.aknkaksd.data.websocket.b.a(WsObjectPool.java:205)
+        log("hookPlay");
+        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a",String.class, new XC_MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                log(param.toString());
+                log("replace hookPlay");
+                return null;
+            }
+        });
+//        a(String str, String str2, long j)
+        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a", String.class,String.class,long.class, new XC_MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                log(param.toString());
+                log("replace hookPlay");
+                return null;
+            }
+        });
+    }
+
+    private void hookLog(LoadPackageParam lpparam) {
+        log("hookLog");
+        findAndHookMethod("com.qennnsad.aknkaksd.util.m", lpparam.classLoader, "a", boolean.class, String.class, String.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                boolean log = (boolean) param.args[0];
+                log = true;
+            }
+        });
     }
 
     private void hookApplication(LoadPackageParam lpparam) {
@@ -158,17 +220,27 @@ public class Tutorial implements IXposedHookLoadPackage {
     private void hookService(LoadPackageParam lpparam) throws ClassNotFoundException {
         log("hock service");
         Class<?> loadClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.websocket.WebSocketService");
-        findAndHookMethod(loadClass, "a", String.class, new XC_MethodHook() {
+        Class<?> wrClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.bean.websocket.WsRequest");
+        findAndHookMethod(loadClass, "a", wrClass, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                String data = param.args[0] + "";
-                log(data);
-                if (data.contains("SendPubMsg") || data.contains("sendGiftNews") || data.contains("login") || data.contains("onLineClient") | data.contains("sendGift")) {
-                    NetUtils.sendPost("http://192.168.0.108:8090/string", data, null);
-                }
+                log(new Gson().toJson((Object) param.args[0]));
                 super.beforeHookedMethod(param);
             }
         });
+
+
+//        findAndHookMethod(loadClass, "a", String.class, new XC_MethodHook() {
+//            @Override
+//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                String data = param.args[0] + "";
+//                log(data);
+//                if (data.contains("SendPubMsg") || data.contains("sendGiftNews") || data.contains("login") || data.contains("onLineClient") | data.contains("sendGift")) {
+//                    NetUtils.sendPost("http://192.168.0.108:8090/string", data, null);
+//                }
+//                super.beforeHookedMethod(param);
+//            }
+//        });
     }
 
 
