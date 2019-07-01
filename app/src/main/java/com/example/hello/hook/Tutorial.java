@@ -57,10 +57,11 @@ public class Tutorial implements IXposedHookLoadPackage {
         hookLog(lpparam);
         hookPlay(lpparam);
         hookUpdate(lpparam);
+        hookReConnect(lpparam);
 
-//        hookRoomLimit(lpparam);
+        hookRoomLimit(lpparam);
 //        hookMePresenter(lpparam);
-//        hookBaseResponse(lpparam);
+        hookBaseResponse(lpparam);
 //        hookConvertResponse(lpparam);
 //        setImVisiale(lpparam);
 //        hookFriendLimit(lpparam);
@@ -74,6 +75,10 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        hookMessage(lpparam);
     }
 
+    private void hookReConnect(LoadPackageParam lpparam) {
+
+    }
+
     private void hookUpdate(LoadPackageParam lpparam) {
         log("hookUpdate");
         findAndHookMethod("com.qennnsad.aknkaksd.util.q", lpparam.classLoader, "a", Context.class, new XC_MethodReplacement() {
@@ -83,6 +88,18 @@ public class Tutorial implements IXposedHookLoadPackage {
                 return "1.6.5";
             }
         });
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.websocket.WsLoginServerRequest", lpparam.classLoader, "setVer", String.class, new XC_MethodReplacement() {
+            @Override
+            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+                Object thisObject = param.thisObject;
+                Field ver = thisObject.getClass().getDeclaredField("ver");
+                ver.setAccessible(true);
+                ver.set(thisObject, "1.6.5");
+                return null;
+            }
+        });
+
+
     }
 
     private void hookPlay(LoadPackageParam lpparam) {
@@ -96,7 +113,7 @@ public class Tutorial implements IXposedHookLoadPackage {
 //        public static WsLoginRequest a(String str) {
 //        at com.qennnsad.aknkaksd.data.websocket.b.a(WsObjectPool.java:205)
         log("hookPlay");
-        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a",String.class, new XC_MethodReplacement() {
+        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a", String.class, new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
                 log(param.toString());
@@ -104,8 +121,20 @@ public class Tutorial implements IXposedHookLoadPackage {
                 return null;
             }
         });
+
+//        log("hookReconnect");
+//        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.WebSocketService", lpparam.classLoader, "g", new XC_MethodReplacement() {
+//            @Override
+//            protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
+//                log("replace g");
+//                log(param.toString());
+//                return null;
+//            }
+//        });
+
+
 //        a(String str, String str2, long j)
-        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a", String.class,String.class,long.class, new XC_MethodReplacement() {
+        findAndHookMethod("com.qennnsad.aknkaksd.data.websocket.b", lpparam.classLoader, "a", String.class, String.class, long.class, new XC_MethodReplacement() {
             @Override
             protected Object replaceHookedMethod(MethodHookParam param) throws Throwable {
                 log(param.toString());
@@ -166,7 +195,7 @@ public class Tutorial implements IXposedHookLoadPackage {
         findAndHookMethod("com.qennnsad.aknkaksd.data.bean.BaseResponse", lpparam.classLoader, "getData", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                log("get a user info");
+//                log("get a user info");
                 Gson gson = new Gson();
                 Object thisObject = param.thisObject;
                 Field field = thisObject.getClass().getDeclaredField("data");
@@ -229,18 +258,6 @@ public class Tutorial implements IXposedHookLoadPackage {
             }
         });
 
-
-//        findAndHookMethod(loadClass, "a", String.class, new XC_MethodHook() {
-//            @Override
-//            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-//                String data = param.args[0] + "";
-//                log(data);
-//                if (data.contains("SendPubMsg") || data.contains("sendGiftNews") || data.contains("login") || data.contains("onLineClient") | data.contains("sendGift")) {
-//                    NetUtils.sendPost("http://192.168.0.108:8090/string", data, null);
-//                }
-//                super.beforeHookedMethod(param);
-//            }
-//        });
     }
 
 
@@ -264,22 +281,39 @@ public class Tutorial implements IXposedHookLoadPackage {
 
     private void hookRoomLimit(LoadPackageParam lpparam) {
         log("hookRoomLimit");
-        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getPreview_time", new XC_MethodHook() {
+
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getPtid", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("getId");
+
                 Object thisObject = param.thisObject;
-                Field[] fields = new Field[4];
-                fields[0] = thisObject.getClass().getDeclaredField("preview_time");
-//                fields[1] = thisObject.getClass().getDeclaredField("id");
-//                fields[2] = thisObject.getClass().getDeclaredField("plid");
-//                fields[3] = thisObject.getClass().getDeclaredField("bsid");
-//                fields[3] = thisObject.getClass().getDeclaredField("come");
-                for (Field field : fields) {
-                    if (field == null) continue;
-                    field.setAccessible(true);
-                    field.set(thisObject, 10000);
-                    XposedBridge.log(field.getName() + field.get(param.thisObject));
-                }
+                Field id = thisObject.getClass().getDeclaredField("ptid");
+                id.setAccessible(true);
+                id.set(thisObject, 0);
+            }
+        });
+
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getBsid", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("getBsid");
+
+                Object thisObject = param.thisObject;
+                Field id = thisObject.getClass().getDeclaredField("bsid");
+                id.setAccessible(true);
+                id.set(thisObject, 0);
+            }
+        });
+        findAndHookMethod("com.qennnsad.aknkaksd.data.bean.room.PrivateLimitBean", lpparam.classLoader, "getPlid", new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                log("getPlid");
+
+                Object thisObject = param.thisObject;
+                Field id = thisObject.getClass().getDeclaredField("plid");
+                id.setAccessible(true);
+                id.set(thisObject, 0);
             }
         });
     }

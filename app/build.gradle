@@ -12,10 +12,10 @@ android {
     }
     signingConfigs {
         config {
-            keyAlias 'ua'
-            keyPassword 'unitop-sure-56'
-            storeFile file('../keystore/UnitopSure.signature')
-            storePassword 'unitop-sure-56'
+            keyAlias 'kwy'
+            keyPassword 'password'
+            storeFile file('../keystore/kwy.jks')
+            storePassword 'password'
         }
     }
     buildTypes {
