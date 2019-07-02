@@ -53,13 +53,12 @@ public class Tutorial implements IXposedHookLoadPackage {
         hookApplication(lpparam);
 //        hookLoginInfo(lpparam);
 //        hookAllActivity(lpparam);
-        hookService(lpparam);
-        hookLog(lpparam);
+        hookWsRequest(lpparam);
+//        hookLog(lpparam);
         hookPlay(lpparam);
         hookUpdate(lpparam);
-        hookReConnect(lpparam);
 
-        hookRoomLimit(lpparam);
+//        hookRoomLimit(lpparam);
 //        hookMePresenter(lpparam);
         hookBaseResponse(lpparam);
 //        hookConvertResponse(lpparam);
@@ -246,8 +245,8 @@ public class Tutorial implements IXposedHookLoadPackage {
         });
     }
 
-    private void hookService(LoadPackageParam lpparam) throws ClassNotFoundException {
-        log("hock service");
+    private void hookWsRequest(LoadPackageParam lpparam) throws ClassNotFoundException {
+        log("hock WsRequest");
         Class<?> loadClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.websocket.WebSocketService");
         Class<?> wrClass = lpparam.classLoader.loadClass("com.qennnsad.aknkaksd.data.bean.websocket.WsRequest");
         findAndHookMethod(loadClass, "a", wrClass, new XC_MethodHook() {
