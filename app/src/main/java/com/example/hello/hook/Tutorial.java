@@ -41,6 +41,7 @@ public class Tutorial implements IXposedHookLoadPackage {
     private static Activity OtherUser;
     private Object meObject;
     int a;
+    private String host = "192.168.0.110";
 
     public int getA() {
         return 10000;
@@ -50,16 +51,15 @@ public class Tutorial implements IXposedHookLoadPackage {
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
-        hookApplication(lpparam);
 //        hookLoginInfo(lpparam);
-//        hookAllActivity(lpparam);
-        hookWsRequest(lpparam);
+        hookAllActivity(lpparam);
+//        hookWsRequest(lpparam);
 //        hookLog(lpparam);
-        hookPlay(lpparam);
-        hookUpdate(lpparam);
+//        hookPlay(lpparam);
+//        hookUpdate(lpparam);
 
 //        hookRoomLimit(lpparam);
-//        hookMePresenter(lpparam);
+        hookMePresenter(lpparam);
         hookBaseResponse(lpparam);
 //        hookConvertResponse(lpparam);
 //        setImVisiale(lpparam);
@@ -195,12 +195,25 @@ public class Tutorial implements IXposedHookLoadPackage {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 //                log("get a user info");
-                Gson gson = new Gson();
+                final Gson gson = new Gson();
                 Object thisObject = param.thisObject;
                 Field field = thisObject.getClass().getDeclaredField("data");
                 field.setAccessible(true);
-                Object data = field.get(thisObject);
-                Log.d("hook_response", data.getClass().getName() + ":   " + gson.toJson(data));
+                final Object data = field.get(thisObject);
+                final String json = gson.toJson(data);
+                Log.d("hook_response", data.getClass().getName() + ":   " + json);
+                if (data.getClass().getName().contains("com.qennnsad.aknkaksd.data.bean.me.UserInfo")) {
+                    HashMap<String, String> params = new HashMap<>();
+                    params.put("data", json);
+                    NetUtils.Post("/saveUser", params, new NetUtils.callResult() {
+                        @Override
+                        public void result(boolean success, String result) {
+                            Log.d("saveUser", success + "");
+                            Log.d("saveUser", json);
+                        }
+                    });
+                }
+
             }
         });
     }
@@ -514,7 +527,7 @@ public class Tutorial implements IXposedHookLoadPackage {
                             log("beatCache" + instance.isConnected());
                         }
                     });
-                    instance.connectToServer("47.97.213.144", 6789);
+                    instance.connectToServer(host, 6789);
                     instance.addListener(new MessageListener() {
                         @Override
                         public void onMessage(Message message) {

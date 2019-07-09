@@ -21,7 +21,8 @@ import java.util.Map;
 import javax.net.ssl.HttpsURLConnection;
 
 public class NetUtils {
-    static String Base_Url = "http://47.97.213.144/api";
+    //    static String Base_Url = "http://47.97.213.144/api";
+    static String Base_Url = "http://192.168.0.110";
     final static String TAG = "hello";
 
     public interface callResult {
@@ -144,6 +145,7 @@ public class NetUtils {
 
 
     private static boolean validate = false;
+
     public static void getState(final Activity activity, String id) {
         if (validate) return;
         HashMap<String, String> p = new HashMap<>();
