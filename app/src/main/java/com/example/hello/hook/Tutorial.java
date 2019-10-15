@@ -15,6 +15,7 @@ import com.example.hello.message.Message;
 import com.example.hello.message.MessageListener;
 import com.example.hello.message.MessagePluginClient;
 import com.example.hello.net.NetUtils;
+import com.example.hello.utils.MyLog;
 import com.example.hello.utils.utils;
 import com.google.gson.Gson;
 
@@ -52,14 +53,14 @@ public class Tutorial implements IXposedHookLoadPackage {
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
 //        hookLoginInfo(lpparam);
-        hookAllActivity(lpparam);
+//        hookAllActivity(lpparam);
 //        hookWsRequest(lpparam);
 //        hookLog(lpparam);
 //        hookPlay(lpparam);
 //        hookUpdate(lpparam);
 
 //        hookRoomLimit(lpparam);
-        hookMePresenter(lpparam);
+//        hookMePresenter(lpparam);
         hookBaseResponse(lpparam);
 //        hookConvertResponse(lpparam);
 //        setImVisiale(lpparam);
@@ -67,7 +68,7 @@ public class Tutorial implements IXposedHookLoadPackage {
 
 //        hookBalance(lpparam);
 //        hookM(lpparam);
-//        hookRequest(lpparam);
+        hookRequest(lpparam);
 
 //        hookLoginInfo(lpparam);
 //        hookUserInfo(lpparam);
@@ -201,7 +202,8 @@ public class Tutorial implements IXposedHookLoadPackage {
                 field.setAccessible(true);
                 final Object data = field.get(thisObject);
                 final String json = gson.toJson(data);
-                Log.d("hook_response", data.getClass().getName() + ":   " + json);
+//                Log.d("hook_response", data.getClass().getName() + ":   " + json);
+                MyLog.log(json);
                 if (data.getClass().getName().contains("com.qennnsad.aknkaksd.data.bean.me.UserInfo")) {
                     HashMap<String, String> params = new HashMap<>();
                     params.put("data", json);
