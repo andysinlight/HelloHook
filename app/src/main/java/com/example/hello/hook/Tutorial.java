@@ -49,6 +49,7 @@ public class Tutorial implements IXposedHookLoadPackage {
     }
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
+        youlemei.handleLoadPackage(lpparam);
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");

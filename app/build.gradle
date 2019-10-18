@@ -50,7 +50,7 @@ task rebootVirtualXposedAPP(type: Exec) {
 }
 // 重启 VXP 需要 hook 的 APP，需要知道它的包名
 task launchVirtualXposedAPP(type: Exec) {
-    def pkg = 'vip.kisslove.app'// 需要 hook 的 app，这里是微信
+    def pkg = 'com.ylmgzb.app'// 需要 hook 的 app，这里是微信
     commandLine android.adbExecutable, 'shell', 'am', 'broadcast', '-a', 'io.va.exposed.CMD', '-e', 'cmd', 'launch', '-e', 'pkg', pkg
 }
 
