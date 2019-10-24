@@ -50,7 +50,8 @@ task rebootVirtualXposedAPP(type: Exec) {
 }
 // 重启 VXP 需要 hook 的 APP，需要知道它的包名
 task launchVirtualXposedAPP(type: Exec) {
-    def pkg = 'com.ylmgzb.app'// 需要 hook 的 app，这里是微信
+//    def pkg = 'com.ylmgzb.app'// 需要 hook 的 app，这里是微信
+    def pkg = 'com.qennnsad.aknkaksd'// 需要 hook 的 app，这里是微信
     commandLine android.adbExecutable, 'shell', 'am', 'broadcast', '-a', 'io.va.exposed.CMD', '-e', 'cmd', 'launch', '-e', 'pkg', pkg
 }
 
@@ -66,5 +67,6 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.5'
 //    implementation("com.squareup.okhttp3:okhttp:3.12.0")
     api 'com.tonystark.android:socket:4.1.0'
+    compile project(path: ':monitor-lib')
 
 }

@@ -18,10 +18,17 @@ import com.example.hello.net.NetUtils;
 import com.example.hello.utils.MyLog;
 import com.example.hello.utils.utils;
 import com.google.gson.Gson;
+import com.virjar.ratel.api.inspect.socket.SocketMonitor;
+import com.virjar.ratel.api.inspect.socket.SocketPackEvent;
+import com.virjar.ratel.api.inspect.socket.observer.EventObserver;
 
+import java.io.IOException;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.InetAddress;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -49,7 +56,72 @@ public class Tutorial implements IXposedHookLoadPackage {
     }
 
     public void handleLoadPackage(final LoadPackageParam lpparam) throws Throwable {
-        youlemei.handleLoadPackage(lpparam);
+//        SocketMonitor.setPacketEventObserver(new FileLogEventObserver(context.getDir("socket_monitor", Context.MODE_PRIVATE)));
+        SocketMonitor.setPacketEventObserver(new EventObserver() {
+            @Override
+            public void onSocketPackageArrival(SocketPackEvent socketPackEvent) {
+                int localPort = socketPackEvent.socket.getLocalPort();
+                int remotePort = socketPackEvent.socket.getPort();
+                InetAddress inetAddress = socketPackEvent.socket.getInetAddress();
+
+                String remoteAddress;
+                if (inetAddress != null) {
+                    remoteAddress = inetAddress.getHostAddress();
+                } else {
+                    remoteAddress = socketPackEvent.socket.toString();
+                }
+
+                StringBuilder headerBuilder = new StringBuilder();
+                headerBuilder.append("Socket ");
+
+                if (socketPackEvent.readAndWrite == SocketMonitor.statusRead) {
+                    headerBuilder.append("response");
+                } else {
+                    headerBuilder.append("request");
+                }
+                headerBuilder.append(" local port:").append(localPort)
+                        .append(" remote address:").append(remoteAddress).append(":").append(remotePort)
+                        .append(" isHttp:").append(socketPackEvent.isHttp)
+                        .append("\n").append("StackTrace:");
+
+                try {
+                    //输出头部数据
+                    //输出头部数据
+                    MyLog.log(headerBuilder.toString());
+                    //输出堆栈
+//                    socketPackEvent.stackTrace.printStackTrace(printStream);
+//                    printStream.flush();
+//                    printStream.write(newLineBytes);
+
+                    //输出报文内容
+                    if (!socketPackEvent.isHttp) {
+//                        printStream.write(socketPackEvent.body);
+                        MyLog.log(new String(socketPackEvent.body));
+                    } else {
+                        //先写头部数据
+//                        printStream.write(socketPackEvent.httpHeaderContent);
+                        MyLog.log(new String(socketPackEvent.httpHeaderContent));
+
+                        //body数据，可能没有，而且可能存在分段压缩之类的
+                        if (socketPackEvent.needDecodeHttpBody()) {
+                            byte[] httpBodyContent = socketPackEvent.httpBodyContent;
+                            if (socketPackEvent.charset != null && socketPackEvent.charset != StandardCharsets.UTF_8) {
+                                httpBodyContent = new String(httpBodyContent, socketPackEvent.charset).getBytes(StandardCharsets.UTF_8);
+                            }
+//                            printStream.write(httpBodyContent);
+                            MyLog.log(new String(httpBodyContent));
+
+
+                        }
+                    }
+                    MyLog.log("\n");
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+//        youlemei.handleLoadPackage(lpparam);
         if (!lpparam.packageName.equals("com.qennnsad.aknkaksd"))
             return;
         XposedBridge.log("load in com.qennnsad.aknkaksd!");
